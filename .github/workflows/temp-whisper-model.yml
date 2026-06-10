@@ -1,4 +1,4 @@
-name: Temporary Faster Whisper CT2 Model
+name: Temporary Faster Whisper CT2 Parts
 
 on:
   pull_request:
@@ -8,30 +8,27 @@ permissions:
   contents: read
 
 jobs:
-  package-model:
+  package-part:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ['00', '01', '02', '03', '04']
     steps:
-      - name: Download CT2 model
+      - name: Download and split CT2 model
         run: |
           python -m pip install --quiet huggingface_hub
           huggingface-cli download deepdml/faster-whisper-large-v3-turbo-ct2 --local-dir ct2-model
           tar -cf ct2-large-v3-turbo.tar ct2-model
-          split -b 350M -d -a 2 ct2-large-v3-turbo.tar ct2.part.
-          sha256sum ct2-large-v3-turbo.tar > ct2-model.sha256
-          ls -lh ct2.part.* ct2-model.sha256
+          split -b 400M -d -a 2 ct2-large-v3-turbo.tar ct2.part.
+          ls -lh ct2.part.*
 
-      - name: Upload split parts
+      - name: Upload selected part
         uses: actions/upload-artifact@v4
         with:
-          name: ct2-turbo-parts
-          path: ct2.part.*
+          name: ct2-turbo-part-${{ matrix.part }}
+          path: ct2.part.${{ matrix.part }}
+          if-no-files-found: ignore
           retention-days: 1
           compression-level: 0
-
-      - name: Upload checksum
-        uses: actions/upload-artifact@v4
-        with:
-          name: ct2-turbo-checksum
-          path: ct2-model.sha256
-          retention-days: 1
