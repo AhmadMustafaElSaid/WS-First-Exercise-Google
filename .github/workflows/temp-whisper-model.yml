@@ -1,4 +1,4 @@
-name: Temporary Faster Whisper CT2 Parts
+name: Temporary Faster Whisper CT2 Direct Parts
 
 on:
   pull_request:
@@ -14,21 +14,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: ['00', '01', '02', '03', '04']
+        part: ['00', '01', '02', '03']
     steps:
-      - name: Download and split CT2 model
+      - name: Download and split model.bin
         run: |
           python -m pip install --quiet huggingface_hub
           hf download deepdml/faster-whisper-large-v3-turbo-ct2 --local-dir ct2-model
-          tar -cf ct2-large-v3-turbo.tar ct2-model
-          split -b 400M -d -a 2 ct2-large-v3-turbo.tar ct2.part.
-          ls -lh ct2.part.*
+          split -b 400M -d -a 2 ct2-model/model.bin model.part.
+          ls -lh model.part.*
 
-      - name: Upload selected part
+      - name: Upload selected model part
         uses: actions/upload-artifact@v4
         with:
-          name: ct2-turbo-part-${{ matrix.part }}
-          path: ct2.part.${{ matrix.part }}
-          if-no-files-found: ignore
+          name: ct2v2-model-part-${{ matrix.part }}
+          path: model.part.${{ matrix.part }}
           retention-days: 1
           compression-level: 0
+
+      - name: Upload model metadata
+        if: matrix.part == '00'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ct2v2-model-meta
+          path: |
+            ct2-model/config.json
+            ct2-model/preprocessor_config.json
+            ct2-model/tokenizer.json
+            ct2-model/vocabulary.json
+          retention-days: 1
