@@ -1,4 +1,4 @@
-name: Temporary Whisper Source Bundle
+name: Temporary Whisper Turbo Model
 
 on:
   pull_request:
@@ -8,33 +8,19 @@ permissions:
   contents: read
 
 jobs:
-  package-source:
+  package-model:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Fetch whisper.cpp source
+      - name: Download multilingual Large V3 Turbo model
         run: |
-          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git
-          rm -rf whisper.cpp/.git
+          curl -L --retry 5 --retry-delay 5 -o ggml-large-v3-turbo-q5_0.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin?download=true'
+          ls -lh ggml-large-v3-turbo-q5_0.bin
 
-      - name: Download multilingual models
-        run: |
-          curl -L --retry 5 --retry-delay 5 -o ggml-base-q5_1.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin?download=true'
-          curl -L --retry 5 --retry-delay 5 -o ggml-small-q5_1.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin?download=true'
-          ls -lh ggml-base-q5_1.bin ggml-small-q5_1.bin
-
-      - name: Create source bundle
-        run: |
-          mkdir bundle
-          mv whisper.cpp bundle/
-          mv ggml-base-q5_1.bin ggml-small-q5_1.bin bundle/
-          tar -C bundle -czf whisper-source-bundle.tar.gz .
-          ls -lh whisper-source-bundle.tar.gz
-
-      - name: Upload source bundle
+      - name: Upload model
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-source-bundle
-          path: whisper-source-bundle.tar.gz
+          name: whisper-large-v3-turbo-q5
+          path: ggml-large-v3-turbo-q5_0.bin
           retention-days: 1
           compression-level: 0
