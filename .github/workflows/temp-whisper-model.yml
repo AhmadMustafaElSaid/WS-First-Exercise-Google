@@ -1,4 +1,4 @@
-name: Temporary Lecture Transcription
+name: Temporary Whisper Source Bundle
 
 on:
   pull_request:
@@ -8,60 +8,33 @@ permissions:
   contents: read
 
 jobs:
-  transcribe:
+  package-source:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg cmake build-essential
-
-      - name: Build whisper.cpp
+      - name: Fetch whisper.cpp source
         run: |
           git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git
-          cmake -S whisper.cpp -B whisper.cpp/build -DCMAKE_BUILD_TYPE=Release
-          cmake --build whisper.cpp/build --config Release -j2
+          rm -rf whisper.cpp/.git
 
-      - name: Download multilingual small model
+      - name: Download multilingual models
         run: |
-          curl -L --retry 5 --retry-delay 5 -o ggml-small-q5_1.bin \
-            'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin?download=true'
-          ls -lh ggml-small-q5_1.bin
+          curl -L --retry 5 --retry-delay 5 -o ggml-base-q5_1.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin?download=true'
+          curl -L --retry 5 --retry-delay 5 -o ggml-small-q5_1.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin?download=true'
+          ls -lh ggml-base-q5_1.bin ggml-small-q5_1.bin
 
-      - name: Reconstruct lecture audio
+      - name: Create source bundle
         run: |
-          find lecture_audio_parts -name 'part_*.opus' | sort | sed "s#^#file '#;s#$#'#" > concat.txt
-          ffmpeg -y -f concat -safe 0 -i concat.txt -ac 1 -ar 16000 -c:a pcm_s16le lecture.wav
-          ffprobe -v error -show_entries format=duration -of default=nw=1 lecture.wav
+          mkdir bundle
+          mv whisper.cpp bundle/
+          mv ggml-base-q5_1.bin ggml-small-q5_1.bin bundle/
+          tar -C bundle -czf whisper-source-bundle.tar.gz .
+          ls -lh whisper-source-bundle.tar.gz
 
-      - name: Transcribe Arabic and English lecture
-        run: |
-          mkdir -p output
-          whisper.cpp/build/bin/whisper-cli \
-            -m ggml-small-q5_1.bin \
-            -f lecture.wav \
-            -l ar \
-            -t 2 \
-            -otxt -osrt -ovtt -oj \
-            -of output/lecture_transcript \
-            --prompt 'محاضرة أو اجتماع باللغة العربية المصرية مع مصطلحات إنجليزية وتقنية. اكتب الكلام كما قيل دون تلخيص.'
-
-      - name: Create Markdown transcript
-        run: |
-          {
-            echo '# التفريغ النصي الكامل للمحاضرة'
-            echo
-            echo '> تفريغ آلي بواسطة Whisper Small متعدد اللغات. قد تحتاج الأسماء والمصطلحات المتخصصة إلى مراجعة.'
-            echo
-            cat output/lecture_transcript.txt
-          } > output/lecture_transcript.md
-
-      - name: Upload transcript files
+      - name: Upload source bundle
         uses: actions/upload-artifact@v4
         with:
-          name: lecture-transcript
-          path: output/
+          name: whisper-source-bundle
+          path: whisper-source-bundle.tar.gz
           retention-days: 1
+          compression-level: 0
