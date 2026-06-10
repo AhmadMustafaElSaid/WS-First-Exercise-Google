@@ -1,4 +1,4 @@
-name: Temporary Whisper Turbo Model
+name: Temporary Whisper Turbo Model Split
 
 on:
   pull_request:
@@ -15,12 +15,29 @@ jobs:
       - name: Download multilingual Large V3 Turbo model
         run: |
           curl -L --retry 5 --retry-delay 5 -o ggml-large-v3-turbo-q5_0.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin?download=true'
-          ls -lh ggml-large-v3-turbo-q5_0.bin
+          split -b 300M -d -a 2 ggml-large-v3-turbo-q5_0.bin turbo.part.
+          sha256sum ggml-large-v3-turbo-q5_0.bin > model.sha256
+          ls -lh turbo.part.* model.sha256
 
-      - name: Upload model
+      - name: Upload first model part
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-large-v3-turbo-q5
-          path: ggml-large-v3-turbo-q5_0.bin
+          name: whisper-turbo-part-00
+          path: turbo.part.00
           retention-days: 1
           compression-level: 0
+
+      - name: Upload second model part
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-turbo-part-01
+          path: turbo.part.01
+          retention-days: 1
+          compression-level: 0
+
+      - name: Upload checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-turbo-checksum
+          path: model.sha256
+          retention-days: 1
