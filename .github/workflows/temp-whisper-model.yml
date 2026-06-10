@@ -1,0 +1,32 @@
+name: Temporary Whisper Model Artifact
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download whisper.cpp release binary and multilingual base model
+        run: |
+          set -euxo pipefail
+          curl -L --retry 5 --retry-delay 3 -o ggml-base-q5_1.bin \
+            'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin?download=true'
+          curl -L --retry 5 --retry-delay 3 -o whisper-bin.zip \
+            'https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.6/whisper-bin-x64.zip'
+          sha256sum ggml-base-q5_1.bin || true
+          ls -lh ggml-base-q5_1.bin whisper-bin.zip
+      - name: Upload runtime bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-runtime-linux
+          path: |
+            ggml-base-q5_1.bin
+            whisper-bin.zip
+          retention-days: 1
+          compression-level: 0
