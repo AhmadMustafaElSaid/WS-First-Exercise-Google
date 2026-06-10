@@ -19,7 +19,7 @@ jobs:
       - name: Download and split CT2 model
         run: |
           python -m pip install --quiet huggingface_hub
-          huggingface-cli download deepdml/faster-whisper-large-v3-turbo-ct2 --local-dir ct2-model
+          hf download deepdml/faster-whisper-large-v3-turbo-ct2 --local-dir ct2-model
           tar -cf ct2-large-v3-turbo.tar ct2-model
           split -b 400M -d -a 2 ct2-large-v3-turbo.tar ct2.part.
           ls -lh ct2.part.*
