@@ -1,4 +1,4 @@
-name: Temporary Whisper Turbo Model Split
+name: Temporary Faster Whisper CT2 Model
 
 on:
   pull_request:
@@ -10,34 +10,28 @@ permissions:
 jobs:
   package-model:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
-      - name: Download multilingual Large V3 Turbo model
+      - name: Download CT2 model
         run: |
-          curl -L --retry 5 --retry-delay 5 -o ggml-large-v3-turbo-q5_0.bin 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin?download=true'
-          split -b 300M -d -a 2 ggml-large-v3-turbo-q5_0.bin turbo.part.
-          sha256sum ggml-large-v3-turbo-q5_0.bin > model.sha256
-          ls -lh turbo.part.* model.sha256
+          python -m pip install --quiet huggingface_hub
+          huggingface-cli download deepdml/faster-whisper-large-v3-turbo-ct2 --local-dir ct2-model
+          tar -cf ct2-large-v3-turbo.tar ct2-model
+          split -b 350M -d -a 2 ct2-large-v3-turbo.tar ct2.part.
+          sha256sum ct2-large-v3-turbo.tar > ct2-model.sha256
+          ls -lh ct2.part.* ct2-model.sha256
 
-      - name: Upload first model part
+      - name: Upload split parts
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-turbo-part-00
-          path: turbo.part.00
-          retention-days: 1
-          compression-level: 0
-
-      - name: Upload second model part
-        uses: actions/upload-artifact@v4
-        with:
-          name: whisper-turbo-part-01
-          path: turbo.part.01
+          name: ct2-turbo-parts
+          path: ct2.part.*
           retention-days: 1
           compression-level: 0
 
       - name: Upload checksum
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-turbo-checksum
-          path: model.sha256
+          name: ct2-turbo-checksum
+          path: ct2-model.sha256
           retention-days: 1
