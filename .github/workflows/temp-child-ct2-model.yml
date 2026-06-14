@@ -1,0 +1,42 @@
+name: Temporary Child CT2 Model Refresh
+
+on:
+  pull_request:
+    branches: [temp-whisper-source-bundle]
+
+permissions:
+  contents: read
+
+jobs:
+  package-part:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ['00', '01', '02', '03']
+    steps:
+      - name: Download and split model.bin
+        run: |
+          python -m pip install --quiet huggingface_hub
+          hf download deepdml/faster-whisper-large-v3-turbo-ct2 --local-dir ct2-model
+          split -b 400M -d -a 2 ct2-model/model.bin model.part.
+          ls -lh model.part.*
+      - name: Upload selected model part
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-content-model-part-${{ matrix.part }}
+          path: model.part.${{ matrix.part }}
+          retention-days: 1
+          compression-level: 0
+      - name: Upload model metadata
+        if: matrix.part == '00'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-content-model-meta
+          path: |
+            ct2-model/config.json
+            ct2-model/preprocessor_config.json
+            ct2-model/tokenizer.json
+            ct2-model/vocabulary.json
+          retention-days: 1
